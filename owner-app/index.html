@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pet Siam — Owner Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --primary: #1e3a5f;
+  --primary-light: #e8eef6;
+  --primary-dark: #0f1e2e;
+  --accent: #e67e22;
+  --accent-light: #fef0e4;
+  --success: #27ae60;
+  --success-light: #d5f5e3;
+  --danger: #e74c3c;
+  --danger-light: #fdedec;
+  --warning: #f39c12;
+  --warning-light: #fef9e7;
+  --info: #2980b9;
+  --info-light: #d6eaf8;
+  --sidebar-w: 240px;
+  --font: 'IBM Plex Sans Thai', sans-serif;
+  --white: #fff;
+  --gray-50: #f8f9fa;
+  --gray-100: #f1f3f5;
+  --gray-200: #e9ecef;
+  --gray-300: #dee2e6;
+  --gray-400: #ced4da;
+  --gray-500: #adb5bd;
+  --gray-600: #868e96;
+  --gray-700: #495057;
+  --gray-800: #343a40;
+  --gray-900: #212529;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.1);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; }
+body { font-family: var(--font); background: var(--gray-50); color: var(--gray-800); min-height: 100vh; }
+
+/* LOADING */
+#loading-overlay {
+  position: fixed; inset: 0; background: var(--primary-dark);
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 16px; z-index: 9999; transition: opacity 0.4s;
+}
+#loading-overlay .logo { color: white; font-size: 30px; font-weight: 700; }
+#loading-overlay .sub { color: rgba(255,255,255,0.5); font-size: 14px; }
+.spinner { width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.2); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* TOAST */
+#toast-container { position: fixed; top: 16px; right: 16px; z-index: 8000; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.toast { background: var(--gray-800); color: white; padding: 12px 16px; border-radius: var(--radius-sm); font-size: 14px; max-width: 300px; display: flex; align-items: center; gap: 8px; pointer-events: auto; animation: slideIn 0.3s ease; box-shadow: var(--shadow-md); }
+.toast.success { background: var(--success); }
+.toast.error { background: var(--danger); }
+.toast.warning { background: var(--warning); }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } }
+
+/* SETUP */
+#setup-screen {
+  position: fixed; inset: 0;
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+  display: flex; align-items: center; justify-content: center; z-index: 7000; padding: 20px;
+}
+.setup-card { background: white; border-radius: var(--radius); padding: 32px; width: 100%; max-width: 420px; }
+
+/* LOGIN */
+#login-screen {
+  position: fixed; inset: 0;
+  background: linear-gradient(160deg, var(--primary-dark) 0%, var(--primary) 100%);
+  display: flex; align-items: center; justify-content: center; z-index: 6000; padding: 20px;
+}
+.login-card { background: white; border-radius: var(--radius); padding: 36px; width: 100%; max-width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.login-brand { text-align: center; margin-bottom: 28px; }
+.login-brand h1 { font-size: 24px; font-weight: 700; color: var(--primary); }
+.login-brand p { color: var(--gray-500); font-size: 13px; margin-top: 4px; }
+
+/* SIDEBAR */
+#sidebar {
+  position: fixed; left: 0; top: 0; bottom: 0;
+  width: var(--sidebar-w); background: var(--primary);
+  display: flex; flex-direction: column; z-index: 500;
+  transition: transform 0.3s ease;
+}
+.sidebar-brand {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.sidebar-brand .logo { color: white; font-size: 20px; font-weight: 700; }
+.sidebar-brand .sub { color: rgba(255,255,255,0.5); font-size: 12px; margin-top: 2px; }
+.sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+.nav-section-title {
+  padding: 8px 20px 4px;
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+  color: rgba(255,255,255,0.4); font-weight: 600;
+}
+.sidebar-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 20px; cursor: pointer;
+  color: rgba(255,255,255,0.7); font-size: 14px; font-weight: 400;
+  transition: all 0.15s; border: none; background: none; width: 100%;
+  font-family: var(--font); text-align: left;
+}
+.sidebar-item i { width: 18px; text-align: center; font-size: 15px; }
+.sidebar-item:hover { background: rgba(255,255,255,0.08); color: white; }
+.sidebar-item.active { background: rgba(255,255,255,0.15); color: white; font-weight: 500; }
+.sidebar-item.active i { color: var(--accent); }
+.sidebar-bottom { padding: 16px 0; border-top: 1px solid rgba(255,255,255,0.1); }
+
+/* MAIN */
+#main-content {
+  margin-left: var(--sidebar-w);
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+}
+
+/* TOP BAR */
+#topbar {
+  background: white; padding: 0 24px;
+  height: 60px; display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--gray-200); position: sticky; top: 0; z-index: 100;
+  box-shadow: var(--shadow);
+}
+#topbar .page-title { font-size: 17px; font-weight: 600; color: var(--gray-900); }
+.topbar-user { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--gray-700); }
+.topbar-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 700; }
+
+/* CONTENT */
+#content-area { flex: 1; padding: 24px; }
+
+/* PAGES */
+.page { display: none; }
+.page.active { display: block; }
+
+/* CARDS */
+.card { background: white; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.card-header { padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--gray-100); }
+.card-header h3 { font-size: 15px; font-weight: 600; }
+.card-body { padding: 20px; }
+
+/* STATS */
+.stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 20px; }
+@media (min-width: 900px) { .stats-grid { grid-template-columns: repeat(4, 1fr); } }
+.stat-card { background: white; border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 6px; }
+.stat-card .label { font-size: 12px; color: var(--gray-500); font-weight: 500; }
+.stat-card .value { font-size: 24px; font-weight: 700; color: var(--gray-900); }
+.stat-card .icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 4px; }
+.stat-card .change { font-size: 12px; color: var(--success); }
+
+/* GRID */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+@media (max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+/* CHART */
+.chart-container { position: relative; height: 260px; }
+
+/* FORMS */
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; font-weight: 500; color: var(--gray-700); margin-bottom: 6px; }
+.form-control { width: 100%; padding: 9px 12px; border: 1.5px solid var(--gray-200); border-radius: var(--radius-sm); font-size: 14px; font-family: var(--font); transition: border-color 0.2s, box-shadow 0.2s; background: white; color: var(--gray-800); appearance: none; }
+.form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+select.form-control { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+
+/* BUTTONS */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 16px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 500; font-family: var(--font); cursor: pointer; border: none; transition: all 0.2s; white-space: nowrap; }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover:not(:disabled) { background: var(--primary-dark); }
+.btn-secondary { background: var(--gray-100); color: var(--gray-700); }
+.btn-secondary:hover:not(:disabled) { background: var(--gray-200); }
+.btn-danger { background: var(--danger); color: white; }
+.btn-success { background: var(--success); color: white; }
+.btn-accent { background: var(--accent); color: white; }
+.btn-sm { padding: 6px 12px; font-size: 13px; }
+.btn-block { width: 100%; }
+
+/* TABLE */
+.table-responsive { overflow-x: auto; }
+table.data-table { width: 100%; border-collapse: collapse; }
+.data-table th { background: var(--gray-50); padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 600; color: var(--gray-600); text-transform: uppercase; letter-spacing: 0.3px; border-bottom: 1px solid var(--gray-200); white-space: nowrap; }
+.data-table td { padding: 12px 14px; border-bottom: 1px solid var(--gray-100); font-size: 14px; }
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: var(--gray-50); }
+
+/* BADGE */
+.badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.badge-primary { background: var(--primary-light); color: var(--primary); }
+.badge-warning { background: var(--warning-light); color: var(--warning); }
+.badge-success { background: var(--success-light); color: var(--success); }
+.badge-danger { background: var(--danger-light); color: var(--danger); }
+.badge-info { background: var(--info-light); color: var(--info); }
+.badge-gray { background: var(--gray-100); color: var(--gray-600); }
+
+/* MODAL */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 5000; padding: 20px; animation: fadeIn 0.2s; }
+@keyframes fadeIn { from { opacity: 0; } }
+.modal { background: white; width: 100%; max-width: 520px; border-radius: var(--radius); max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow-md); }
+.modal-header { padding: 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--gray-100); position: sticky; top: 0; background: white; z-index: 1; }
+.modal-header h3 { font-size: 17px; font-weight: 600; }
+.modal-body { padding: 20px; }
+.modal-footer { padding: 0 20px 20px; display: flex; gap: 10px; justify-content: flex-end; }
+.btn-icon { width: 34px; height: 34px; padding: 0; border-radius: var(--radius-sm); }
+
+/* SEARCH */
+.search-bar { position: relative; }
+.search-bar input { width: 100%; padding: 9px 12px 9px 36px; border: 1.5px solid var(--gray-200); border-radius: 30px; font-size: 14px; font-family: var(--font); background: var(--gray-50); }
+.search-bar input:focus { outline: none; border-color: var(--primary); background: white; }
+.search-bar i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--gray-400); }
+
+/* TABS */
+.tabs { display: flex; gap: 0; border-bottom: 2px solid var(--gray-200); overflow-x: auto; margin-bottom: 16px; }
+.tab-btn { padding: 10px 18px; font-size: 14px; font-family: var(--font); background: none; border: none; cursor: pointer; color: var(--gray-500); white-space: nowrap; font-weight: 500; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: color 0.2s; }
+.tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+/* MOBILE SIDEBAR */
+#sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 499; }
+#menu-toggle { display: none; background: none; border: none; font-size: 22px; cursor: pointer; color: var(--gray-700); }
+
+@media (max-width: 768px) {
+  #sidebar { transform: translateX(-100%); }
+  #sidebar.open { transform: translateX(0); }
+  #sidebar-overlay.show { display: block; }
+  #main-content { margin-left: 0; }
+  #menu-toggle { display: block; }
+  #content-area { padding: 16px; }
+}
+
+/* UTILS */
+.flex { display: flex; } .items-center { align-items: center; } .justify-between { justify-content: space-between; } .gap-2 { gap: 8px; } .gap-3 { gap: 12px; }
+.text-right { text-align: right; } .text-center { text-align: center; }
+.text-sm { font-size: 13px; } .text-muted { color: var(--gray-500); }
+.font-bold { font-weight: 700; } .text-primary { color: var(--primary); }
+.text-success { color: var(--success); } .text-danger { color: var(--danger); }
+.mt-1 { margin-top: 4px; } .mt-2 { margin-top: 8px; } .mt-3 { margin-top: 12px; }
+.mt-4 { margin-top: 16px; } .mt-5 { margin-top: 20px; }
+.mb-2 { margin-bottom: 8px; } .mb-3 { margin-bottom: 12px; } .mb-4 { margin-bottom: 16px; }
+.w-full { width: 100%; }
+.empty-state { text-align: center; padding: 40px 20px; color: var(--gray-400); }
+.empty-state i { font-size: 40px; margin-bottom: 12px; display: block; opacity: 0.4; }
+.section-title { font-size: 12px; font-weight: 600; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+.list-item { padding: 12px 16px; border-bottom: 1px solid var(--gray-100); display: flex; align-items: center; gap: 12px; }
+.list-item:last-child { border-bottom: none; }
+</style>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div class="logo">🐾 Pet Siam</div>
+  <div class="sub">Owner Dashboard</div>
+  <div class="spinner"></div>
+</div>
+
+<div id="toast-container"></div>
+
+<!-- Setup -->
+<div id="setup-screen" style="display:none">
+  <div class="setup-card">
+    <div style="text-align:center; margin-bottom:24px;">
+      <div style="font-size:36px; margin-bottom:8px;">🐾</div>
+      <h2 style="color:var(--primary); font-size:20px;">Pet Siam — ตั้งค่าระบบ</h2>
+      <p style="color:var(--gray-500); font-size:13px; margin-top:4px;">กรุณากรอก Google Apps Script URL</p>
+    </div>
+    <div class="form-group">
+      <label>Google Apps Script Web App URL</label>
+      <input type="url" id="api-url-input" class="form-control" placeholder="https://script.google.com/macros/s/...">
+    </div>
+    <button class="btn btn-primary btn-block" style="padding:12px" onclick="saveApiUrl()">บันทึกและเริ่มใช้งาน</button>
+  </div>
+</div>
+
+<!-- Login -->
+<div id="login-screen" style="display:none">
+  <div class="login-card">
+    <div class="login-brand">
+      <div style="font-size:42px; margin-bottom:12px;">🐾</div>
+      <h1>Pet Siam</h1>
+      <p>Owner Dashboard</p>
+    </div>
+    <div class="form-group">
+      <label>ชื่อผู้ใช้</label>
+      <input type="text" id="login-username" class="form-control" placeholder="owner">
+    </div>
+    <div class="form-group">
+      <label>รหัสผ่าน</label>
+      <input type="password" id="login-password" class="form-control" placeholder="••••••••">
+    </div>
+    <button id="login-btn" class="btn btn-primary btn-block" style="padding:12px" onclick="doLogin()">
+      <i class="fa fa-sign-in-alt"></i> เข้าสู่ระบบ
+    </button>
+    <div style="margin-top:14px; text-align:center;">
+      <button class="btn btn-sm" style="color:var(--gray-400);background:none;font-size:12px" onclick="showSetup()">⚙️ ตั้งค่า URL</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sidebar Overlay -->
+<div id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<!-- Sidebar -->
+<aside id="sidebar" style="display:none">
+  <div class="sidebar-brand">
+    <div class="logo">🐾 Pet Siam</div>
+    <div class="sub">Owner Dashboard</div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-title">ภาพรวม</div>
+    <button class="sidebar-item active" onclick="showPage('dashboard')" id="nav-dashboard">
+      <i class="fa fa-chart-pie"></i> แดชบอร์ด
+    </button>
+
+    <div class="nav-section-title" style="margin-top:8px">การขาย</div>
+    <button class="sidebar-item" onclick="showPage('orders')" id="nav-orders">
+      <i class="fa fa-shopping-cart"></i> ออเดอร์ทั้งหมด
+    </button>
+    <button class="sidebar-item" onclick="showPage('payments')" id="nav-payments">
+      <i class="fa fa-money-bill"></i> การชำระเงิน
+    </button>
+
+    <div class="nav-section-title" style="margin-top:8px">จัดการ</div>
+    <button class="sidebar-item" onclick="showPage('products')" id="nav-products">
+      <i class="fa fa-box"></i> สินค้า
+    </button>
+    <button class="sidebar-item" onclick="showPage('customers')" id="nav-customers">
+      <i class="fa fa-store"></i> ลูกค้า
+    </button>
+    <button class="sidebar-item" onclick="showPage('staff')" id="nav-staff">
+      <i class="fa fa-users"></i> พนักงานขาย
+    </button>
+  </nav>
+  <div class="sidebar-bottom">
+    <button class="sidebar-item" onclick="logout()">
+      <i class="fa fa-sign-out-alt"></i> ออกจากระบบ
+    </button>
+  </div>
+</aside>
+
+<!-- Main Content -->
+<div id="main-content" style="display:none">
+  <header id="topbar">
+    <div style="display:flex; align-items:center; gap:12px">
+      <button id="menu-toggle" onclick="toggleSidebar()"><i class="fa fa-bars"></i></button>
+      <div class="page-title" id="topbar-title">แดชบอร์ด</div>
+    </div>
+    <div class="topbar-user">
+      <div id="topbar-name" style="font-size:14px">เจ้าของร้าน</div>
+      <div class="topbar-avatar" id="topbar-avatar">O</div>
+    </div>
+  </header>
+
+  <div id="content-area">
+
+    <!-- DASHBOARD PAGE -->
+    <div id="page-dashboard" class="page active">
+      <div class="stats-grid" id="dashboard-stats">
+        <div class="stat-card">
+          <div class="icon" style="background:var(--primary-light);color:var(--primary)"><i class="fa fa-baht-sign"></i></div>
+          <div class="label">ยอดขายเดือนนี้</div>
+          <div class="value" id="dash-month-sales">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon" style="background:var(--success-light);color:var(--success)"><i class="fa fa-shopping-cart"></i></div>
+          <div class="label">ออเดอร์ทั้งหมด</div>
+          <div class="value" id="dash-total-orders">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon" style="background:var(--warning-light);color:var(--warning)"><i class="fa fa-store"></i></div>
+          <div class="label">ลูกค้าทั้งหมด</div>
+          <div class="value" id="dash-customers">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon" style="background:var(--info-light);color:var(--info)"><i class="fa fa-check-circle"></i></div>
+          <div class="label">เงินที่เก็บได้</div>
+          <div class="value" id="dash-collected">-</div>
+        </div>
+      </div>
+
+      <div class="grid-2 mb-4">
+        <div class="card">
+          <div class="card-header"><h3>ยอดขายรายเดือน</h3></div>
+          <div class="card-body">
+            <div class="chart-container">
+              <canvas id="chart-monthly"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>ยอดขายแยกตามสถานะ</h3></div>
+          <div class="card-body">
+            <div class="chart-container">
+              <canvas id="chart-status"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2 mb-4">
+        <div class="card">
+          <div class="card-header"><h3>ยอดขายตามพนักงาน</h3></div>
+          <div id="sales-by-staff-list" class="card-body" style="padding:0"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>สินค้าขายดี Top 5</h3></div>
+          <div id="top-products-list" class="card-body" style="padding:0"></div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header"><h3>สรุปการชำระเงิน</h3></div>
+        <div class="card-body">
+          <div class="grid-3">
+            <div style="text-align:center; padding:16px; background:var(--success-light); border-radius:var(--radius-sm)">
+              <div style="font-size:24px; font-weight:700; color:var(--success)" id="pay-cash">฿0</div>
+              <div style="font-size:13px; color:var(--success); margin-top:4px">เงินสด</div>
+            </div>
+            <div style="text-align:center; padding:16px; background:var(--info-light); border-radius:var(--radius-sm)">
+              <div style="font-size:24px; font-weight:700; color:var(--info)" id="pay-transfer">฿0</div>
+              <div style="font-size:13px; color:var(--info); margin-top:4px">โอนเงิน</div>
+            </div>
+            <div style="text-align:center; padding:16px; background:var(--primary-light); border-radius:var(--radius-sm)">
+              <div style="font-size:24px; font-weight:700; color:var(--primary)" id="pay-total">฿0</div>
+              <div style="font-size:13px; color:var(--primary); margin-top:4px">รวมทั้งหมด</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ORDERS PAGE -->
+    <div id="page-orders" class="page">
+      <div class="flex justify-between items-center mb-4">
+        <h2 style="font-size:18px; font-weight:600;">ออเดอร์ทั้งหมด</h2>
+      </div>
+      <div class="tabs">
+        <button class="tab-btn active" onclick="filterOwnerOrders('all',this)">ทั้งหมด</button>
+        <button class="tab-btn" onclick="filterOwnerOrders('รับออเดอร์',this)">รับออเดอร์</button>
+        <button class="tab-btn" onclick="filterOwnerOrders('จัดส่งแล้ว',this)">จัดส่งแล้ว</button>
+        <button class="tab-btn" onclick="filterOwnerOrders('ออกบิลแล้ว',this)">ออกบิลแล้ว</button>
+        <button class="tab-btn" onclick="filterOwnerOrders('เก็บเงินแล้ว',this)">เก็บเงินแล้ว</button>
+        <button class="tab-btn" onclick="filterOwnerOrders('เสร็จสิ้น',this)">เสร็จสิ้น</button>
+      </div>
+      <div style="margin-bottom:12px" class="search-bar">
+        <i class="fa fa-search"></i>
+        <input type="text" placeholder="ค้นหา..." oninput="searchOwnerOrders(this.value)">
+      </div>
+      <div class="card">
+        <div class="table-responsive">
+          <table class="data-table" id="orders-table">
+            <thead><tr>
+              <th>เลขออเดอร์</th>
+              <th>ร้านค้า</th>
+              <th>พนักงาน</th>
+              <th>วันที่</th>
+              <th>ยอดเงิน</th>
+              <th>สถานะ</th>
+              <th>จัดการ</th>
+            </tr></thead>
+            <tbody id="orders-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAYMENTS PAGE -->
+    <div id="page-payments" class="page">
+      <div class="flex justify-between items-center mb-4">
+        <h2 style="font-size:18px; font-weight:600;">รายงานการชำระเงิน</h2>
+      </div>
+      <div class="card mb-4">
+        <div class="card-body">
+          <div class="grid-3">
+            <div style="text-align:center; padding:14px; background:var(--success-light); border-radius:var(--radius-sm)">
+              <div style="font-size:20px; font-weight:700; color:var(--success)" id="pay-cash2">฿0</div>
+              <div style="font-size:13px; color:var(--success)">เงินสด</div>
+            </div>
+            <div style="text-align:center; padding:14px; background:var(--info-light); border-radius:var(--radius-sm)">
+              <div style="font-size:20px; font-weight:700; color:var(--info)" id="pay-transfer2">฿0</div>
+              <div style="font-size:13px; color:var(--info)">โอนเงิน</div>
+            </div>
+            <div style="text-align:center; padding:14px; background:var(--primary-light); border-radius:var(--radius-sm)">
+              <div style="font-size:20px; font-weight:700; color:var(--primary)" id="pay-total2">฿0</div>
+              <div style="font-size:13px; color:var(--primary)">รวมทั้งหมด</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead><tr>
+              <th>เลขออเดอร์</th>
+              <th>ร้านค้า</th>
+              <th>พนักงาน</th>
+              <th>จำนวนเงิน</th>
+              <th>วิธีชำระ</th>
+              <th>วันที่</th>
+            </tr></thead>
+            <tbody id="payments-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRODUCTS PAGE -->
+    <div id="page-products" class="page">
+      <div class="flex justify-between items-center mb-4">
+        <h2 style="font-size:18px; font-weight:600;">จัดการสินค้า</h2>
+        <div class="flex gap-2">
+          <button class="btn btn-secondary btn-sm" onclick="openImportProducts()"><i class="fa fa-file-import"></i> นำเข้า CSV</button>
+          <button class="btn btn-primary btn-sm" onclick="openAddProduct()"><i class="fa fa-plus"></i> เพิ่มสินค้า</button>
+        </div>
+      </div>
+      <div class="search-bar mb-3">
+        <i class="fa fa-search"></i>
+        <input type="text" placeholder="ค้นหาสินค้า..." oninput="searchProducts(this.value)">
+      </div>
+      <div class="card">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead><tr>
+              <th>รหัส</th>
+              <th>ชื่อสินค้า</th>
+              <th>หมวดหมู่</th>
+              <th>หน่วย</th>
+              <th>ราคาทุน</th>
+              <th>ราคาขาย</th>
+              <th>จัดการ</th>
+            </tr></thead>
+            <tbody id="products-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- CUSTOMERS PAGE -->
+    <div id="page-customers" class="page">
+      <div class="flex justify-between items-center mb-4">
+        <h2 style="font-size:18px; font-weight:600;">ลูกค้าทั้งหมด</h2>
+      </div>
+      <div class="search-bar mb-3">
+        <i class="fa fa-search"></i>
+        <input type="text" placeholder="ค้นหาลูกค้า..." oninput="searchAllCustomers(this.value)">
+      </div>
+      <div class="card">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead><tr>
+              <th>รหัส</th>
+              <th>ชื่อร้าน</th>
+              <th>เบอร์โทร</th>
+              <th>ผู้ติดต่อ</th>
+              <th>พนักงานขาย</th>
+            </tr></thead>
+            <tbody id="customers-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- STAFF PAGE -->
+    <div id="page-staff" class="page">
+      <div class="flex justify-between items-center mb-4">
+        <h2 style="font-size:18px; font-weight:600;">จัดการพนักงานขาย</h2>
+        <button class="btn btn-primary btn-sm" onclick="openAddStaff()"><i class="fa fa-plus"></i> เพิ่มพนักงาน</button>
+      </div>
+      <div class="card">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead><tr>
+              <th>ชื่อ</th>
+              <th>ชื่อผู้ใช้</th>
+              <th>บทบาท</th>
+              <th>เบอร์โทร</th>
+              <th>วันที่สร้าง</th>
+              <th>จัดการ</th>
+            </tr></thead>
+            <tbody id="staff-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODALS -->
+
+<!-- Product Modal -->
+<div id="modal-product" class="modal-backdrop" style="display:none" onclick="closeModal('modal-product')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3 id="product-modal-title">เพิ่มสินค้า</h3>
+      <button class="btn btn-icon btn-secondary" onclick="closeModal('modal-product')"><i class="fa fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="product-edit-id">
+      <div class="grid-2">
+        <div class="form-group">
+          <label>รหัสสินค้า</label>
+          <input type="text" id="product-code" class="form-control" placeholder="P001">
+        </div>
+        <div class="form-group">
+          <label>หน่วย</label>
+          <input type="text" id="product-unit" class="form-control" placeholder="ชิ้น, กล่อง, ถุง...">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>ชื่อสินค้า <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="product-name" class="form-control" placeholder="ชื่อสินค้า">
+      </div>
+      <div class="form-group">
+        <label>หมวดหมู่</label>
+        <input type="text" id="product-category" class="form-control" placeholder="อาหาร, ของเล่น, อุปกรณ์...">
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>ราคาทุน (บาท)</label>
+          <input type="number" id="product-cost" class="form-control" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label>ราคาขาย (บาท)</label>
+          <input type="number" id="product-price" class="form-control" placeholder="0">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-product')">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="saveProduct()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Staff Modal -->
+<div id="modal-staff" class="modal-backdrop" style="display:none" onclick="closeModal('modal-staff')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3 id="staff-modal-title">เพิ่มพนักงานขาย</h3>
+      <button class="btn btn-icon btn-secondary" onclick="closeModal('modal-staff')"><i class="fa fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="staff-edit-id">
+      <div class="form-group">
+        <label>ชื่อ-นามสกุล <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="staff-name" class="form-control" placeholder="ชื่อพนักงาน">
+      </div>
+      <div class="form-group">
+        <label>ชื่อผู้ใช้ <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="staff-username" class="form-control" placeholder="username">
+      </div>
+      <div class="form-group">
+        <label>รหัสผ่าน <span id="pass-required" style="color:var(--danger)">*</span></label>
+        <input type="password" id="staff-password" class="form-control" placeholder="รหัสผ่าน">
+        <div id="pass-hint" style="display:none; font-size:12px; color:var(--gray-500); margin-top:4px">เว้นว่างไว้ถ้าไม่ต้องการเปลี่ยนรหัสผ่าน</div>
+      </div>
+      <div class="form-group">
+        <label>เบอร์โทรศัพท์</label>
+        <input type="tel" id="staff-phone" class="form-control" placeholder="0xx-xxx-xxxx">
+      </div>
+      <div class="form-group">
+        <label>บทบาท</label>
+        <select id="staff-role" class="form-control">
+          <option value="sales">พนักงานขาย</option>
+          <option value="owner">เจ้าของ</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-staff')">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="saveStaff()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import CSV Modal -->
+<div id="modal-import" class="modal-backdrop" style="display:none" onclick="closeModal('modal-import')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3>นำเข้าสินค้าจาก CSV</h3>
+      <button class="btn btn-icon btn-secondary" onclick="closeModal('modal-import')"><i class="fa fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <p class="text-sm text-muted mb-3">ไฟล์ CSV ต้องมีหัวข้อ (header): <strong>code, name, category, unit, costPrice, sellPrice, stock</strong></p>
+      <div class="form-group">
+        <label>เลือกไฟล์ CSV</label>
+        <input type="file" id="csv-file" class="form-control" accept=".csv">
+      </div>
+      <div id="csv-preview" style="display:none; max-height:200px; overflow-y:auto; background:var(--gray-50); border-radius:var(--radius-sm); padding:12px; font-size:12px; font-family:monospace; margin-top:8px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-import')">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="importCSV()"><i class="fa fa-upload"></i> นำเข้า</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// STATE & DATA
+// ============================================================
+let currentUser = null;
+let allOrders = [];
+let allProducts = [];
+let allCustomers = [];
+let allPayments = [];
+let allStaff = [];
+let dashboardData = null;
+let currentOrderFilter = 'all';
+let editingProductId = null;
+let editingStaffId = null;
+let monthlyChart = null;
+let statusChart = null;
+
+// ============================================================
+// API
+// ============================================================
+const API_URL_KEY = 'petSiamOwnerApiUrl';
+function getApiUrl() { return localStorage.getItem(API_URL_KEY) || localStorage.getItem('petSiamApiUrl') || ''; }
+function getToken() { return localStorage.getItem('petSiamOwnerToken') || ''; }
+
+async function api(action, data = {}) {
+  const url = getApiUrl();
+  if (!url) throw new Error('ยังไม่ได้ตั้งค่า API URL');
+  const token = getToken();
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action, token, ...data })
+  });
+  const result = await res.json();
+  if (!result.success) throw new Error(result.error || 'เกิดข้อผิดพลาด');
+  return result;
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function toast(msg, type = 'default', duration = 3000) {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  const icons = { success: 'check-circle', error: 'times-circle', warning: 'exclamation-triangle', default: 'info-circle' };
+  el.innerHTML = `<i class="fa fa-${icons[type]||'info-circle'}"></i> ${msg}`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), duration);
+}
+
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+
+// ============================================================
+// SETUP & AUTH
+// ============================================================
+function showSetup() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('setup-screen').style.display = 'flex';
+  document.getElementById('api-url-input').value = getApiUrl();
+}
+
+function saveApiUrl() {
+  const url = document.getElementById('api-url-input').value.trim();
+  if (!url) return toast('กรุณากรอก URL', 'error');
+  localStorage.setItem(API_URL_KEY, url);
+  localStorage.setItem('petSiamApiUrl', url);
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  toast('บันทึก URL สำเร็จ', 'success');
+}
+
+async function doLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  if (!username || !password) return toast('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน', 'error');
+
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px"></div>';
+
+  try {
+    const res = await api('login', { username, password });
+    if (res.user.role !== 'owner') {
+      toast('บัญชีนี้ไม่มีสิทธิ์เข้าใช้ Owner App', 'error');
+      btn.disabled = false; btn.innerHTML = '<i class="fa fa-sign-in-alt"></i> เข้าสู่ระบบ';
+      return;
+    }
+    localStorage.setItem('petSiamOwnerToken', res.token);
+    localStorage.setItem('petSiamOwnerUser', JSON.stringify(res.user));
+    currentUser = res.user;
+    startApp();
+  } catch (err) {
+    toast(err.message, 'error');
+    btn.disabled = false; btn.innerHTML = '<i class="fa fa-sign-in-alt"></i> เข้าสู่ระบบ';
+  }
+}
+
+function logout() {
+  if (!confirm('ยืนยันการออกจากระบบ?')) return;
+  localStorage.removeItem('petSiamOwnerToken');
+  localStorage.removeItem('petSiamOwnerUser');
+  location.reload();
+}
+
+// ============================================================
+// APP INIT
+// ============================================================
+async function startApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('sidebar').style.display = 'flex';
+  document.getElementById('main-content').style.display = 'flex';
+
+  document.getElementById('topbar-name').textContent = currentUser.name;
+  document.getElementById('topbar-avatar').textContent = (currentUser.name||'O')[0].toUpperCase();
+
+  await loadAllData();
+}
+
+async function loadAllData() {
+  try {
+    const [ordersRes, productsRes, customersRes, paymentsRes, staffRes, dashRes] = await Promise.all([
+      api('getOrders'),
+      api('getProducts'),
+      api('getCustomers'),
+      api('getPayments'),
+      api('getSalesStaff'),
+      api('getDashboardData')
+    ]);
+
+    allOrders = ordersRes.data || [];
+    allProducts = productsRes.data || [];
+    allCustomers = customersRes.data || [];
+    allPayments = paymentsRes.data || [];
+    allStaff = (staffRes.data || []).filter(s => s.role === 'sales');
+    dashboardData = dashRes.data;
+
+    renderDashboard();
+    renderOrdersTable();
+    renderPaymentsTable();
+    renderProductsTable();
+    renderCustomersTable();
+    renderStaffTable();
+  } catch (err) {
+    toast('โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error');
+  }
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  const navBtn = document.getElementById('nav-' + name);
+  if (navBtn) navBtn.classList.add('active');
+
+  const titles = { dashboard: 'แดชบอร์ด', orders: 'ออเดอร์ทั้งหมด', payments: 'การชำระเงิน', products: 'จัดการสินค้า', customers: 'ลูกค้า', staff: 'พนักงานขาย' };
+  document.getElementById('topbar-title').textContent = titles[name] || name;
+
+  if (window.innerWidth <= 768) closeSidebar();
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('show');
+}
+
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('show');
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+function renderDashboard() {
+  if (!dashboardData) return;
+  const { summary, bySales, byProduct, paymentSummary, statusCount, monthlyTrend } = dashboardData;
+
+  document.getElementById('dash-month-sales').textContent = '฿' + formatMoney(summary.thisMonthSales);
+  document.getElementById('dash-total-orders').textContent = summary.totalOrders;
+  document.getElementById('dash-customers').textContent = summary.totalCustomers;
+  document.getElementById('dash-collected').textContent = '฿' + formatMoney(summary.totalPaymentCollected);
+
+  // Payment summary
+  ['', '2'].forEach(suffix => {
+    document.getElementById('pay-cash' + suffix).textContent = '฿' + formatMoney(paymentSummary.cash);
+    document.getElementById('pay-transfer' + suffix).textContent = '฿' + formatMoney(paymentSummary.transfer);
+    document.getElementById('pay-total' + suffix).textContent = '฿' + formatMoney(paymentSummary.total);
+  });
+
+  // Monthly chart
+  if (monthlyChart) monthlyChart.destroy();
+  monthlyChart = new Chart(document.getElementById('chart-monthly'), {
+    type: 'bar',
+    data: {
+      labels: monthlyTrend.map(m => m.month),
+      datasets: [{
+        label: 'ยอดขาย (บาท)',
+        data: monthlyTrend.map(m => m.total),
+        backgroundColor: 'rgba(30,58,95,0.8)',
+        borderRadius: 6
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => '฿'+formatMoney(v) } } } }
+  });
+
+  // Status chart
+  const statusLabels = Object.keys(statusCount);
+  const statusData = Object.values(statusCount);
+  const colors = ['#2980b9','#1e3a5f','#f39c12','#27ae60','#868e96'];
+  if (statusChart) statusChart.destroy();
+  statusChart = new Chart(document.getElementById('chart-status'), {
+    type: 'doughnut',
+    data: {
+      labels: statusLabels,
+      datasets: [{ data: statusData, backgroundColor: colors, borderWidth: 0 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { family: "'IBM Plex Sans Thai'" } } } } }
+  });
+
+  // By staff
+  const staffList = document.getElementById('sales-by-staff-list');
+  if (!bySales.length) {
+    staffList.innerHTML = '<div class="empty-state"><p>ยังไม่มีข้อมูล</p></div>';
+  } else {
+    const maxTotal = bySales[0].total || 1;
+    staffList.innerHTML = bySales.map(s => `
+      <div style="padding:12px 16px; border-bottom:1px solid var(--gray-100)">
+        <div class="flex justify-between items-center mb-1">
+          <span style="font-size:14px; font-weight:500">${s.name}</span>
+          <span style="font-size:14px; font-weight:700; color:var(--primary)">฿${formatMoney(s.total)}</span>
+        </div>
+        <div style="height:6px; background:var(--gray-100); border-radius:3px; overflow:hidden">
+          <div style="height:100%; width:${Math.round(s.total/maxTotal*100)}%; background:var(--primary); border-radius:3px;"></div>
+        </div>
+        <div style="font-size:12px; color:var(--gray-500); margin-top:4px">${s.count} ออเดอร์</div>
+      </div>
+    `).join('');
+  }
+
+  // Top products
+  const prodList = document.getElementById('top-products-list');
+  if (!byProduct.length) {
+    prodList.innerHTML = '<div class="empty-state"><p>ยังไม่มีข้อมูล</p></div>';
+  } else {
+    prodList.innerHTML = byProduct.slice(0,5).map((p, i) => `
+      <div style="padding:12px 16px; border-bottom:1px solid var(--gray-100)">
+        <div class="flex justify-between items-center">
+          <div>
+            <span style="font-size:13px; color:var(--gray-400); margin-right:8px">#${i+1}</span>
+            <span style="font-size:14px; font-weight:500">${p.name}</span>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:14px; font-weight:700; color:var(--primary)">฿${formatMoney(p.total)}</div>
+            <div style="font-size:12px; color:var(--gray-500)">${p.qty} ชิ้น</div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+}
+
+// ============================================================
+// ORDERS TABLE
+// ============================================================
+function getStatusBadge(status) {
+  const map = { 'รับออเดอร์': 'badge-info', 'จัดส่งแล้ว': 'badge-primary', 'ออกบิลแล้ว': 'badge-warning', 'เก็บเงินแล้ว': 'badge-success', 'เสร็จสิ้น': 'badge-gray' };
+  return `<span class="badge ${map[status]||'badge-gray'}">${status||'-'}</span>`;
+}
+
+function renderOrdersTable(filter, search) {
+  let orders = [...allOrders];
+  if (filter && filter !== 'all') orders = orders.filter(o => o.status === filter);
+  if (search) orders = orders.filter(o =>
+    (o.customerName||'').toLowerCase().includes(search.toLowerCase()) ||
+    (o.orderNo||'').toLowerCase().includes(search.toLowerCase()) ||
+    (o.salesName||'').toLowerCase().includes(search.toLowerCase())
+  );
+  const tbody = document.getElementById('orders-tbody');
+  if (!orders.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--gray-400)">ไม่พบออเดอร์</td></tr>';
+    return;
+  }
+  tbody.innerHTML = orders.map(o => `
+    <tr>
+      <td style="font-weight:600; color:var(--primary)">${o.orderNo}</td>
+      <td>${o.customerName||'-'}</td>
+      <td>${o.salesName||'-'}</td>
+      <td>${formatDate(o.orderDate||o.createdAt)}</td>
+      <td class="font-bold">฿${formatMoney(o.totalAmount)}</td>
+      <td>${getStatusBadge(o.status)}</td>
+      <td>
+        <select class="form-control" style="padding:4px 8px; font-size:12px; min-width:110px" onchange="ownerChangeStatus('${o.id}',this.value)">
+          ${['รับออเดอร์','จัดส่งแล้ว','ออกบิลแล้ว','เก็บเงินแล้ว','เสร็จสิ้น'].map(s => `<option value="${s}" ${s===o.status?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function filterOwnerOrders(status, btn) {
+  currentOrderFilter = status;
+  document.querySelectorAll('#page-orders .tab-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderOrdersTable(status);
+}
+
+function searchOwnerOrders(val) { renderOrdersTable(currentOrderFilter, val); }
+
+async function ownerChangeStatus(orderId, status) {
+  try {
+    await api('updateOrderStatus', { orderId, status });
+    const o = allOrders.find(o => o.id === orderId);
+    if (o) o.status = status;
+    toast('อัปเดตสถานะสำเร็จ', 'success');
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+// ============================================================
+// PAYMENTS TABLE
+// ============================================================
+function renderPaymentsTable() {
+  const tbody = document.getElementById('payments-tbody');
+  if (!allPayments.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--gray-400)">ยังไม่มีการชำระเงิน</td></tr>';
+    return;
+  }
+  const staffMap = {};
+  allStaff.forEach(s => { staffMap[s.id] = s.name; });
+  tbody.innerHTML = allPayments.map(p => `
+    <tr>
+      <td style="font-weight:600; color:var(--primary)">${p.orderNo||'-'}</td>
+      <td>${p.customerName||'-'}</td>
+      <td>${staffMap[p.salesId] || p.salesId || '-'}</td>
+      <td class="font-bold text-success">฿${formatMoney(p.amount)}</td>
+      <td><span class="badge ${p.method==='เงินสด'?'badge-success':'badge-info'}">${p.method||'-'}</span></td>
+      <td>${formatDate(p.paidAt)}</td>
+    </tr>
+  `).join('');
+}
+
+// ============================================================
+// PRODUCTS
+// ============================================================
+function renderProductsTable(search) {
+  let prods = [...allProducts];
+  if (search) prods = prods.filter(p =>
+    p.name.toLowerCase().includes(search.toLowerCase()) ||
+    (p.code||'').toLowerCase().includes(search.toLowerCase())
+  );
+  const tbody = document.getElementById('products-tbody');
+  if (!prods.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--gray-400)">ไม่พบสินค้า</td></tr>';
+    return;
+  }
+  tbody.innerHTML = prods.map(p => `
+    <tr>
+      <td style="color:var(--gray-500); font-size:13px">${p.code||'-'}</td>
+      <td style="font-weight:500">${p.name}</td>
+      <td>${p.category||'-'}</td>
+      <td>${p.unit||'-'}</td>
+      <td>฿${formatMoney(p.costPrice)}</td>
+      <td style="font-weight:600; color:var(--primary)">฿${formatMoney(p.sellPrice)}</td>
+      <td>
+        <div class="flex gap-2">
+          <button class="btn btn-sm btn-secondary" onclick="openEditProduct('${p.id}')"><i class="fa fa-edit"></i></button>
+          <button class="btn btn-sm btn-danger" onclick="deleteProductConfirm('${p.id}')"><i class="fa fa-trash"></i></button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function searchProducts(val) { renderProductsTable(val); }
+
+function openAddProduct() {
+  editingProductId = null;
+  document.getElementById('product-modal-title').textContent = 'เพิ่มสินค้า';
+  ['product-edit-id','product-code','product-name','product-category','product-unit','product-cost','product-price'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('product-unit').value = 'ชิ้น';
+  openModal('modal-product');
+}
+
+function openEditProduct(id) {
+  editingProductId = id;
+  const p = allProducts.find(p => p.id === id);
+  if (!p) return;
+  document.getElementById('product-modal-title').textContent = 'แก้ไขสินค้า';
+  document.getElementById('product-edit-id').value = p.id;
+  document.getElementById('product-code').value = p.code || '';
+  document.getElementById('product-name').value = p.name || '';
+  document.getElementById('product-category').value = p.category || '';
+  document.getElementById('product-unit').value = p.unit || '';
+  document.getElementById('product-cost').value = p.costPrice || '';
+  document.getElementById('product-price').value = p.sellPrice || '';
+  openModal('modal-product');
+}
+
+async function saveProduct() {
+  const name = document.getElementById('product-name').value.trim();
+  if (!name) return toast('กรุณากรอกชื่อสินค้า', 'error');
+  const data = {
+    code: document.getElementById('product-code').value,
+    name,
+    category: document.getElementById('product-category').value,
+    unit: document.getElementById('product-unit').value || 'ชิ้น',
+    costPrice: parseFloat(document.getElementById('product-cost').value) || 0,
+    sellPrice: parseFloat(document.getElementById('product-price').value) || 0
+  };
+  try {
+    if (editingProductId) {
+      await api('updateProduct', { id: editingProductId, ...data });
+      const idx = allProducts.findIndex(p => p.id === editingProductId);
+      if (idx >= 0) allProducts[idx] = { ...allProducts[idx], ...data };
+      toast('แก้ไขสินค้าสำเร็จ', 'success');
+    } else {
+      const res = await api('addProduct', data);
+      allProducts.push({ id: res.id, ...data, active: true });
+      toast('เพิ่มสินค้าสำเร็จ', 'success');
+    }
+    renderProductsTable();
+    closeModal('modal-product');
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+async function deleteProductConfirm(id) {
+  const p = allProducts.find(p => p.id === id);
+  if (!confirm(`ลบสินค้า "${p?.name}" ใช่หรือไม่?`)) return;
+  try {
+    await api('deleteProduct', { id });
+    allProducts = allProducts.filter(p => p.id !== id);
+    renderProductsTable();
+    toast('ลบสินค้าสำเร็จ', 'success');
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+// ============================================================
+// IMPORT CSV
+// ============================================================
+function openImportProducts() {
+  document.getElementById('csv-file').value = '';
+  document.getElementById('csv-preview').style.display = 'none';
+  openModal('modal-import');
+}
+
+document.addEventListener('change', function(e) {
+  if (e.target.id !== 'csv-file') return;
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const text = ev.target.result;
+    const lines = text.split('\n').slice(0, 6);
+    const preview = document.getElementById('csv-preview');
+    preview.textContent = lines.join('\n');
+    preview.style.display = 'block';
+  };
+  reader.readAsText(file, 'UTF-8');
+});
+
+async function importCSV() {
+  const file = document.getElementById('csv-file').files[0];
+  if (!file) return toast('กรุณาเลือกไฟล์ CSV', 'error');
+
+  const reader = new FileReader();
+  reader.onload = async function(ev) {
+    try {
+      const text = ev.target.result;
+      const lines = text.split('\n').filter(l => l.trim());
+      const headers = lines[0].split(',').map(h => h.trim().replace(/['"]/g,''));
+      const products = lines.slice(1).map(line => {
+        const cols = line.split(',').map(c => c.trim().replace(/['"]/g,''));
+        const obj = {};
+        headers.forEach((h, i) => { obj[h] = cols[i] || ''; });
+        return obj;
+      }).filter(p => p.name);
+
+      if (!products.length) return toast('ไม่พบข้อมูลสินค้าในไฟล์', 'error');
+
+      const res = await api('importProducts', { products });
+      toast(`นำเข้าสำเร็จ ${res.imported} รายการ`, 'success');
+      closeModal('modal-import');
+      const productsRes = await api('getProducts');
+      allProducts = productsRes.data || [];
+      renderProductsTable();
+    } catch (err) { toast(err.message, 'error'); }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+// ============================================================
+// CUSTOMERS TABLE
+// ============================================================
+function renderCustomersTable(search) {
+  let custs = [...allCustomers];
+  if (search) custs = custs.filter(c =>
+    c.name.toLowerCase().includes(search.toLowerCase()) ||
+    (c.phone||'').includes(search)
+  );
+  const staffMap = {};
+  allStaff.forEach(s => { staffMap[s.id] = s.name; });
+  const tbody = document.getElementById('customers-tbody');
+  if (!custs.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--gray-400)">ไม่พบลูกค้า</td></tr>';
+    return;
+  }
+  tbody.innerHTML = custs.map(c => `
+    <tr>
+      <td style="color:var(--gray-500); font-size:13px">${c.code||'-'}</td>
+      <td style="font-weight:500">${c.name}</td>
+      <td>${c.phone||'-'}</td>
+      <td>${c.contactPerson||'-'}</td>
+      <td>${staffMap[c.salesId] || '-'}</td>
+    </tr>
+  `).join('');
+}
+
+function searchAllCustomers(val) { renderCustomersTable(val); }
+
+// ============================================================
+// STAFF
+// ============================================================
+function renderStaffTable() {
+  const tbody = document.getElementById('staff-tbody');
+  const allUsers = [...allStaff];
+  if (!allUsers.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--gray-400)">ยังไม่มีพนักงาน</td></tr>';
+    return;
+  }
+  tbody.innerHTML = allUsers.map(s => `
+    <tr>
+      <td style="font-weight:500">${s.name}</td>
+      <td>${s.username}</td>
+      <td><span class="badge ${s.role==='owner'?'badge-primary':'badge-gray'}">${s.role==='owner'?'เจ้าของ':'พนักงานขาย'}</span></td>
+      <td>${s.phone||'-'}</td>
+      <td style="font-size:13px; color:var(--gray-500)">${formatDate(s.createdAt)}</td>
+      <td>
+        <div class="flex gap-2">
+          <button class="btn btn-sm btn-secondary" onclick="openEditStaff('${s.id}')"><i class="fa fa-edit"></i> แก้ไข</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteStaffConfirm('${s.id}')"><i class="fa fa-trash"></i></button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openAddStaff() {
+  editingStaffId = null;
+  document.getElementById('staff-modal-title').textContent = 'เพิ่มพนักงานขาย';
+  ['staff-edit-id','staff-name','staff-username','staff-password','staff-phone'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('staff-role').value = 'sales';
+  document.getElementById('pass-required').style.display = 'inline';
+  document.getElementById('pass-hint').style.display = 'none';
+  openModal('modal-staff');
+}
+
+function openEditStaff(id) {
+  editingStaffId = id;
+  const s = allStaff.find(s => s.id === id);
+  if (!s) return;
+  document.getElementById('staff-modal-title').textContent = 'แก้ไขพนักงาน';
+  document.getElementById('staff-edit-id').value = s.id;
+  document.getElementById('staff-name').value = s.name || '';
+  document.getElementById('staff-username').value = s.username || '';
+  document.getElementById('staff-password').value = '';
+  document.getElementById('staff-phone').value = s.phone || '';
+  document.getElementById('staff-role').value = s.role || 'sales';
+  document.getElementById('pass-required').style.display = 'none';
+  document.getElementById('pass-hint').style.display = 'block';
+  openModal('modal-staff');
+}
+
+async function saveStaff() {
+  const name = document.getElementById('staff-name').value.trim();
+  const username = document.getElementById('staff-username').value.trim();
+  const password = document.getElementById('staff-password').value;
+  if (!name || !username) return toast('กรุณากรอกชื่อและชื่อผู้ใช้', 'error');
+  if (!editingStaffId && !password) return toast('กรุณากรอกรหัสผ่าน', 'error');
+
+  const data = { name, username, phone: document.getElementById('staff-phone').value, role: document.getElementById('staff-role').value };
+  if (password) data.password = password;
+
+  try {
+    if (editingStaffId) {
+      await api('updateSalesStaff', { id: editingStaffId, ...data });
+      const idx = allStaff.findIndex(s => s.id === editingStaffId);
+      if (idx >= 0) allStaff[idx] = { ...allStaff[idx], ...data };
+      toast('แก้ไขข้อมูลสำเร็จ', 'success');
+    } else {
+      const res = await api('addSalesStaff', data);
+      allStaff.push({ id: res.id, ...data });
+      toast('เพิ่มพนักงานสำเร็จ', 'success');
+    }
+    renderStaffTable();
+    closeModal('modal-staff');
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+async function deleteStaffConfirm(id) {
+  const s = allStaff.find(s => s.id === id);
+  if (!confirm(`ลบพนักงาน "${s?.name}" ใช่หรือไม่?`)) return;
+  try {
+    await api('deleteSalesStaff', { id });
+    allStaff = allStaff.filter(s => s.id !== id);
+    renderStaffTable();
+    toast('ลบพนักงานสำเร็จ', 'success');
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function formatMoney(n) {
+  const num = parseFloat(n) || 0;
+  return num.toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '-';
+  try { return new Date(dateStr).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }); }
+  catch { return dateStr; }
+}
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('load', async () => {
+  setTimeout(() => {
+    document.getElementById('loading-overlay').style.opacity = '0';
+    setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 400);
+  }, 800);
+
+  const apiUrl = getApiUrl();
+  if (!apiUrl) {
+    document.getElementById('setup-screen').style.display = 'flex';
+    return;
+  }
+
+  const savedUser = localStorage.getItem('petSiamOwnerUser');
+  const savedToken = localStorage.getItem('petSiamOwnerToken');
+  if (savedUser && savedToken) {
+    currentUser = JSON.parse(savedUser);
+    await startApp();
+  } else {
+    document.getElementById('login-screen').style.display = 'flex';
+  }
+});
+</script>
+</body>
+</html>
